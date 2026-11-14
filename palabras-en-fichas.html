@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Palabras en fichas</title>
+<style>
+:root{--ink:#0d2a3a;--line:#5b7f93;--blue:#1b7fb8;--muted:#6b8696}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#f6fafc}
+header{display:flex;gap:8px;align-items:center;padding:10px 14px;background:#fff;border-bottom:1px solid #d5e3ec;flex-wrap:wrap}
+h1{font-size:18px;margin:0 12px 0 0}
+button,select,input{font:inherit;color:var(--ink)}
+button,select{padding:6px 12px;border:1px solid #b8cfdc;background:#fff;border-radius:8px;cursor:pointer}
+button:hover{background:#eaf3f9}
+button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+main{display:flex;gap:14px;padding:14px;align-items:flex-start;flex-wrap:wrap}
+#boardWrap{flex:0 1 700px;min-width:300px;position:relative}
+canvas{width:100%;display:block;border:1px solid #b8cfdc;border-radius:10px;touch-action:none;background:#eaf3f9}
+aside{flex:1 1 320px;max-width:420px;font-family:'Source Serif 4',Georgia,'Times New Roman',serif;background:#f9faf6;border:1px solid #d5e3ec;border-radius:10px;padding:12px}
+aside .lvl{font-family:system-ui,sans-serif;font-size:13px;font-weight:700;letter-spacing:.06em;color:#5f6b5a}
+aside h2{margin:2px 0 14px;font-size:34px;line-height:1.1;color:#0b4a6f}
+aside h3{margin:14px 0 6px;font-family:system-ui,sans-serif;font-size:13px;color:#5f6b5a;letter-spacing:.06em;text-transform:uppercase}
+ul{margin:0;padding:0;list-style:none}
+li.clue{display:flex;align-items:flex-start;gap:8px;flex-wrap:nowrap;padding:5px 0;font-size:17px;font-weight:700;border:0}
+li.clue .ct{flex:0 1 auto;min-width:0}
+li.clue .n,li.clue .q{flex:none;white-space:nowrap}
+li.clue .ic{width:22px;text-align:center;flex:none;font-size:18px}
+li.clue .n{font-weight:400;font-size:15px;color:#5f6b5a}
+li.ok{color:#1b7fb8}li.ok .ic{background:#1b7fb8;color:#fff;border-radius:50%;height:22px;line-height:22px;font-size:14px}
+li.ok .n{color:#1b7fb8}
+li.warn{color:#b34a00}li.warn .ic{background:#f59a2f;color:#fff;border-radius:50%;height:22px;line-height:22px;font-size:14px}
+li.warn .n{color:#b34a00}
+button.q{width:22px;height:22px;padding:0;border-radius:50%;border:2px solid #8ec5ea;background:#e6f3fb;color:#1b7fb8;font-weight:700;font-size:13px;line-height:1}
+#popup{position:absolute;left:50%;top:14px;transform:translate(-50%,-20px);opacity:0;pointer-events:none;transition:.25s;background:#fff4e3;border:2px solid #f59a2f;color:#7a3a00;border-radius:12px;padding:10px 16px;max-width:90%;box-shadow:0 6px 20px rgba(0,0,0,.2);font-size:15px;z-index:5;cursor:pointer}
+#popup b{display:block;font-size:16px;margin-bottom:2px}
+#popup.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.hint{font-size:13px;color:var(--muted);margin:8px 0}
+#win{display:none;margin-top:10px;padding:10px;border-radius:8px;background:#e1f4e6;color:#1d6b34;font-weight:700}
+.hidden{display:none!important}
+.muted{font-size:13px;color:#6b8696;margin-left:auto}
+#loginBox{position:fixed;inset:0;background:rgba(13,42,58,.45);display:flex;align-items:center;justify-content:center;z-index:20}
+#loginBox.hidden{display:none}
+#loginBox .card{background:#fff;border-radius:12px;padding:18px;width:min(92vw,340px);box-shadow:0 10px 30px rgba(0,0,0,.3)}
+#loginBox h3{margin:0 0 10px}
+#loginBox input{display:block;width:100%;margin:8px 0;padding:8px 10px;border:1px solid #b8cfdc;border-radius:8px}
+#loginBox .row{display:flex;gap:8px;margin-top:8px}
+#lgMsg{font-size:14px;color:#b3261e;min-height:18px}
+#editor{padding:14px}
+#editor .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+#editor input[type=text],#editor input[type=number]{padding:6px 8px;border:1px solid #b8cfdc;border-radius:8px}
+#editor input[type=number]{width:64px}
+#edGrid{display:grid;gap:2px;margin:10px 0;width:max-content;max-width:100%;overflow:auto}
+.ec{position:relative;width:40px;height:40px}
+.ec input{width:100%;height:100%;text-align:center;font-weight:700;font-size:18px;border:1px solid #b8cfdc;border-radius:4px;padding:0;background:#fff;text-transform:uppercase}
+.ec input:focus{outline:2px solid var(--blue)}
+.ec .tag{position:absolute;top:1px;left:3px;font-size:9px;color:#345;pointer-events:none}
+#edMsg{font-size:14px;min-height:20px}
+#edMsg.err{color:#b3261e}#edMsg.ok{color:#1d6b34}
+#clues .cl{display:flex;gap:8px;align-items:center;margin:4px 0}
+#clues .cl b{min-width:130px;font-size:14px}
+#clues input{flex:1;min-width:160px}
+.brush{padding:4px 9px;font-size:13px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Palabras en fichas</h1>
+  <button id="tabPlay" class="on">Jugar</button>
+  <button id="tabEdit">Editor</button>
+  <select id="puzzleSel"></select>
+  <button id="btnImport">Importar</button>
+  <button id="btnExport">Exportar</button>
+  <span id="cloudInfo" class="muted"></span>
+  <button id="btnUpload" class="hidden"></button>
+  <button id="btnLogin">Iniciar sesión</button>
+  <input id="fileIn" type="file" accept=".json,application/json" class="hidden">
+</header>
+
+<div id="loginBox" class="hidden"><div class="card">
+  <h3>Iniciar sesión</h3>
+  <input id="lgMail" type="email" placeholder="Email" autocomplete="username">
+  <input id="lgPass" type="password" placeholder="Contraseña" autocomplete="current-password">
+  <div id="lgMsg"></div>
+  <div class="row"><button id="lgGo" class="primary">Entrar</button><button id="lgCancel">Cancelar</button></div>
+</div></div>
+
+<div id="play">
+<main>
+  <div id="boardWrap"><canvas id="cv"></canvas>
+    <div id="popup"><b id="popTitle"></b><span id="popText"></span></div>
+  </div>
+  <aside>
+    <div class="lvl">PUZZLE</div><h2 id="ptitle"></h2>
+    <h3>Horizontales</h3><ul id="listA"></ul>
+    <h3>Verticales</h3><ul id="listD"></ul>
+    <p class="hint">Arrastra una ficha para moverla. Clic (o tecla R / clic derecho) para girarla 90°. Al formar una palabra correcta, las fichas se fusionan.</p>
+    <button id="btnShuffle">Mezclar fichas</button> <button id="btnReset">Reiniciar</button>
+    <div id="win">¡Puzzle completado!</div>
+  </aside>
+</main>
+</div>
+
+<div id="editor" class="hidden">
+  <div class="row">
+    <label>Nombre <input type="text" id="edName" size="24"></label>
+    <label>Filas <input type="number" id="edRows" min="3" max="14"></label>
+    <label>Columnas <input type="number" id="edCols" min="3" max="14"></label>
+    <button id="edResize">Aplicar tamaño</button>
+  </div>
+  <div class="row">
+    <button id="modeLetters" class="on">1. Escribir letras</button>
+    <button id="modePieces">2. Pintar piezas</button>
+    <button id="edAuto">Dividir automáticamente</button>
+    <button id="edClearPieces">Quitar piezas</button>
+  </div>
+  <div class="row" id="brushes"></div>
+  <div class="hint">Letras: escribe en las casillas (acentos se quitan, la Ñ se mantiene). Piezas: elige un número y haz clic en las casillas; cada pieza debe ser conexa y tener de 2 a 5 casillas, y ninguna palabra puede quedar entera dentro de una sola pieza.</div>
+  <div id="edGrid"></div>
+  <h3>Pistas (opcionales)</h3>
+  <div id="clues"></div>
+  <div class="row">
+    <button id="edSave" class="primary">Guardar y jugar</button>
+    <button id="edDelete">Borrar este puzzle</button>
+    <button id="edNew">Nuevo vacío</button>
+  </div>
+  <div id="edMsg"></div>
+</div>
+
+<script>
+//CORE_START
+function normLetter(s){
+  if(!s) return '';
+  s=s.toUpperCase().replace(/Ñ/g,'\u0001').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\u0001/g,'Ñ');
+  const m=s.match(/[A-ZÑ]/); return m?m[0]:'';
+}
+const isL=ch=>!!ch&&ch!=='.'&&ch!==' ';
+
+function deriveWords(grid){
+  const R=grid.length, C=Math.max(0,...grid.map(r=>r.length));
+  const at=(r,c)=>(r>=0&&r<R&&c>=0&&c<grid[r].length&&isL(grid[r][c]))?grid[r][c]:null;
+  const words=[];
+  for(let r=0;r<R;r++){let c=0;while(c<C){if(at(r,c)){const s=c;let t='';while(at(r,c)){t+=at(r,c);c++;}
+    if(t.length>=2)words.push({dir:'A',r,c:s,text:t,id:'A'+r+','+s});}else c++;}}
+  for(let c=0;c<C;c++){let r=0;while(r<R){if(at(r,c)){const s=r;let t='';while(at(r,c)){t+=at(r,c);r++;}
+    if(t.length>=2)words.push({dir:'D',r:s,c,text:t,id:'D'+s+','+c});}else r++;}}
+  return words;
+}
+
+function wordCellKey(w,i){return (w.dir==='A'?w.r:w.r+i)+','+(w.dir==='A'?w.c+i:w.c);}
+function wordsInOnePiece(grid,pieces){
+  const owner=new Map();pieces.forEach((pc,i)=>pc.forEach(([r,c])=>owner.set(r+','+c,i)));
+  return deriveWords(grid).filter(w=>{
+    const ids=new Set();
+    for(let i=0;i<w.text.length;i++){const o=owner.get(wordCellKey(w,i));if(o===undefined)return false;ids.add(o);}
+    return ids.size===1;
+  });
+}
+function validatePuzzle(p){
+  const errs=[], letters=new Set();
+  p.grid.forEach((row,r)=>[...row].forEach((ch,c)=>{if(isL(ch))letters.add(r+','+c);}));
+  if(letters.size<4) errs.push('Pon al menos 4 letras.');
+  const words=deriveWords(p.grid);
+  if(!words.length) errs.push('No hay ninguna palabra (mínimo 2 letras seguidas).');
+  const covered=new Set();
+  words.forEach(w=>{for(let i=0;i<w.text.length;i++)covered.add((w.dir==='A'?w.r:w.r+i)+','+(w.dir==='A'?w.c+i:w.c));});
+  letters.forEach(k=>{if(!covered.has(k))errs.push('Letra suelta en fila '+(+k.split(',')[0]+1)+', columna '+(+k.split(',')[1]+1)+'.');});
+  const assigned=new Set();
+  p.pieces.forEach((pc,i)=>{
+    const n=i+1;
+    if(pc.length<2||pc.length>5) errs.push('La pieza '+n+' tiene '+pc.length+' casillas (debe tener 2-5).');
+    const ks=new Set(pc.map(([r,c])=>r+','+c));
+    pc.forEach(([r,c])=>{const k=r+','+c; if(!letters.has(k))errs.push('La pieza '+n+' incluye una casilla vacía.'); assigned.add(k);});
+    if(pc.length){ const seen=new Set([[...ks][0]]), q=[[...ks][0]];
+      while(q.length){const [r,c]=q.pop().split(',').map(Number);
+        for(const [dr,dc] of [[1,0],[-1,0],[0,1],[0,-1]]){const k=(r+dr)+','+(c+dc); if(ks.has(k)&&!seen.has(k)){seen.add(k);q.push(k);}}}
+      if(seen.size!==ks.size) errs.push('La pieza '+n+' no es conexa.');}
+  });
+  letters.forEach(k=>{if(!assigned.has(k))errs.push('Hay letras sin pieza asignada.');});
+  wordsInOnePiece(p.grid,p.pieces).forEach(w=>errs.push('La palabra «'+w.text+'» está entera dentro de una sola pieza; reparte sus letras entre al menos 2 piezas.'));
+  return [...new Set(errs)];
+}
+
+function shuffle(a,rng=Math.random){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function autoSplit(grid,rng=Math.random){
+  const cells=[];grid.forEach((row,r)=>[...row].forEach((ch,c)=>{if(isL(ch))cells.push([r,c]);}));
+  const key=(r,c)=>r+','+c, has=new Set(cells.map(([r,c])=>key(r,c)));
+  const nb=(r,c)=>[[r+1,c],[r-1,c],[r,c+1],[r,c-1]].filter(([a,b])=>has.has(key(a,b)));
+  for(let t=0;t<800;t++){
+    const owner=new Map(), pieces=[];
+    for(const [r,c] of shuffle(cells,rng)){
+      if(owner.has(key(r,c)))continue;
+      const size=2+Math.floor(rng()*4), pc=[[r,c]], id=pieces.length;
+      owner.set(key(r,c),id);
+      while(pc.length<size){
+        const cand=[];pc.forEach(([a,b])=>nb(a,b).forEach(([x,y])=>{if(!owner.has(key(x,y)))cand.push([x,y]);}));
+        if(!cand.length)break;
+        const [x,y]=cand[Math.floor(rng()*cand.length)];pc.push([x,y]);owner.set(key(x,y),id);
+      }
+      pieces.push(pc);
+    }
+    let ok=true;
+    for(let i=0;i<pieces.length;i++){
+      if(pieces[i].length>=2)continue;
+      const [r,c]=pieces[i][0];
+      const tgt=nb(r,c).map(([x,y])=>owner.get(key(x,y))).filter(j=>j!==i&&pieces[j].length>=2&&pieces[j].length<5);
+      if(!tgt.length){ok=false;break;}
+      const j=tgt[Math.floor(rng()*tgt.length)];pieces[j].push([r,c]);owner.set(key(r,c),j);pieces[i]=[];
+    }
+    if(!ok)continue;
+    const res=pieces.filter(p=>p.length);
+    if(res.every(p=>p.length>=2&&p.length<=5)&&!wordsInOnePiece(grid,res).length)return res;
+  }
+  return null;
+}
+
+/* ---- motor de juego ---- */
+function pivotOf(cells){
+  const n=cells.length,cx=cells.reduce((a,k)=>a+k.x,0)/n,cy=cells.reduce((a,k)=>a+k.y,0)/n;
+  let best=cells[0],bd=1e9;for(const k of cells){const d=(k.x-cx)**2+(k.y-cy)**2;if(d<bd){bd=d;best=k;}}return best;
+}
+function rotCells(cells,times=1){
+  let cur=cells;
+  for(let t=0;t<times;t++){const p=pivotOf(cur);cur=cur.map(k=>({x:p.x-(k.y-p.y),y:p.y+(k.x-p.x),ch:k.ch,o:k.o}));}
+  return cur;
+}
+function canPlace(cells,self,blocks,W,H){
+  const occ=new Set();blocks.forEach(b=>{if(b!==self)b.cells.forEach(k=>occ.add(k.x+','+k.y));});
+  return cells.every(k=>k.x>=0&&k.y>=0&&k.x<W&&k.y<H&&!occ.has(k.x+','+k.y));
+}
+function tryRotate(b,blocks,W,H){
+  if(b.merged)return false;
+  const rc=rotCells(b.cells),offs=[];
+  for(let dx=-7;dx<=7;dx++)for(let dy=-7;dy<=7;dy++)offs.push([dx,dy,dx*dx+dy*dy]);
+  offs.sort((a,c)=>a[2]-c[2]);
+  for(const [ox,oy] of offs){
+    const cs=rc.map(k=>({x:k.x+ox,y:k.y+oy,ch:k.ch,o:k.o}));
+    if(canPlace(cs,b,blocks,W,H)){b.cells=cs;return true;}
+  }
+  return false;
+}
+
+function findRuns(blocks){
+  const occ=new Map();let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  blocks.forEach(b=>b.cells.forEach(k=>{occ.set(k.x+','+k.y,{ch:k.ch,o:k.o,b});x0=Math.min(x0,k.x);x1=Math.max(x1,k.x);y0=Math.min(y0,k.y);y1=Math.max(y1,k.y);}));
+  const runs=[];
+  for(let y=y0;y<=y1;y++){let x=x0;while(x<=x1){if(occ.has(x+','+y)){const cells=[];let t='';while(occ.has(x+','+y)){t+=occ.get(x+','+y).ch;cells.push({x,y});x++;}
+    if(t.length>=2)runs.push({dir:'A',text:t,cells});}else x++;}}
+  for(let x=x0;x<=x1;x++){let y=y0;while(y<=y1){if(occ.has(x+','+y)){const cells=[];let t='';while(occ.has(x+','+y)){t+=occ.get(x+','+y).ch;cells.push({x,y});y++;}
+    if(t.length>=2)runs.push({dir:'D',text:t,cells});}else y++;}}
+  return {runs,occ};
+}
+function orientedOk(run,occ){
+  const tr=(x,y,o)=>{const [r,c]=o.split(',').map(Number);return (x-c)+','+(y-r);};
+  const f=run.cells[0],t0=tr(f.x,f.y,occ.get(f.x+','+f.y).o);
+  const bs=new Set(run.cells.map(c=>occ.get(c.x+','+c.y).b));
+  for(const b of bs)for(const k of b.cells)if(tr(k.x,k.y,k.o)!==t0)return false;
+  return true;
+}
+function classifyRun(run,occ,words){
+  const same=words.filter(w=>w.dir===run.dir&&w.text===run.text);
+  if(same.some(w=>run.cells.every((c,i)=>occ.get(c.x+','+c.y).o===wordCellKey(w,i))))return orientedOk(run,occ)?'ok':'rot';
+  if(same.length)return 'pieces';
+  if(words.some(w=>w.dir!==run.dir&&w.text===run.text))return 'dir';
+  return null;
+}
+function analyzeBad(blocks,words){
+  const {runs,occ}=findRuns(blocks),keys=new Set(),items=[],claimed=new Set();
+  for(const r of runs){
+    const kind=classifyRun(r,occ,words);if(kind!=='pieces'&&kind!=='dir'&&kind!=='rot')continue;
+    let cand,reason;
+    if(kind==='pieces'||kind==='rot'){cand=words.filter(w=>w.dir===r.dir&&w.text===r.text);reason=kind==='rot'?'rotation':'pieces';}
+    else{cand=words.filter(w=>w.dir!==r.dir&&w.text===r.text);reason='cross';}
+    const w=cand.find(x=>!claimed.has(x.id))||cand[0];claimed.add(w.id);
+    r.cells.forEach(c=>keys.add(c.x+','+c.y));
+    const okeys=r.cells.map(c=>occ.get(c.x+','+c.y).o);
+    items.push({kind,reason,text:r.text,dir:r.dir,wordId:w.id,okeys,blocks:[...new Set(r.cells.map(c=>occ.get(c.x+','+c.y).b))],sig:reason+r.text+[...okeys].sort().join(';')});
+  }
+  return {keys,items};
+}
+function resolve(blocks,words){
+  const merges=[];
+  let changed=true;
+  while(changed){
+    changed=false;
+    const {runs,occ}=findRuns(blocks);
+    for(const run of runs){
+      if(classifyRun(run,occ,words)!=='ok')continue;
+      const arr=[...new Set(run.cells.map(c=>occ.get(c.x+','+c.y).b))];
+      if(arr.length<2)continue;
+      const t=arr[0];
+      for(let i=1;i<arr.length;i++){t.cells.push(...arr[i].cells);blocks.splice(blocks.indexOf(arr[i]),1);}
+      t.merged=true;changed=true;merges.push({b:t,keys:run.cells.map(c=>occ.get(c.x+','+c.y).o)});break;
+    }
+  }
+  return merges;
+}
+function foundWords(blocks,words){
+  // una palabra cuenta como resuelta si todas sus casillas están en un bloque fusionado
+  // (así sigue resuelta aunque se junten otras fichas a su lado)
+  const res={};
+  for(const w of words){
+    for(const b of blocks){
+      if(!b.merged)continue;
+      const os=new Set(b.cells.map(k=>k.o));
+      let all=true;for(let i=0;i<w.text.length;i++)if(!os.has(wordCellKey(w,i))){all=false;break;}
+      if(all){res[w.id]=true;break;}
+    }
+  }
+  return res;
+}
+function newGame(p,words,rng=Math.random){
+  const W=14,H=14;
+  for(let attempt=0;attempt<300;attempt++){
+    const occ=new Set(),blocks=[],m=attempt<200?1:0;let ok=true;
+    const items=shuffle(p.pieces,rng).map(pc=>{
+      let cells=pc.map(([r,c])=>({x:c,y:r,ch:p.grid[r][c],o:r+','+c}));
+      cells=rotCells(cells,Math.floor(rng()*4));
+      const mx=Math.min(...cells.map(k=>k.x)),my=Math.min(...cells.map(k=>k.y));
+      cells=cells.map(k=>({x:k.x-mx,y:k.y-my,ch:k.ch,o:k.o}));
+      return {cells,w:Math.max(...cells.map(k=>k.x))+1,h:Math.max(...cells.map(k=>k.y))+1};
+    }).sort((a,b)=>Math.max(b.w,b.h)-Math.max(a.w,a.h));
+    for(const it of items){
+      if(it.w>W||it.h>H){ok=false;break;}
+      const pos=[];for(let px=0;px<=W-it.w;px++)for(let py=0;py<=H-it.h;py++)pos.push([px,py]);
+      let placed=false;
+      for(const [px,py] of shuffle(pos,rng)){
+        const cs=it.cells.map(k=>({x:k.x+px,y:k.y+py,ch:k.ch,o:k.o}));
+        let free=true;
+        for(const k of cs){for(let dx=-m;dx<=m&&free;dx++)for(let dy=-m;dy<=m;dy++)if(occ.has((k.x+dx)+','+(k.y+dy))){free=false;break;}if(!free)break;}
+        if(free){cs.forEach(k=>occ.add(k.x+','+k.y));blocks.push({id:blocks.length,cells:cs,merged:false});placed=true;break;}
+      }
+      if(!placed){ok=false;break;}
+    }
+    if(!ok)continue;
+    resolve(blocks,words);
+    if(blocks.some(b=>b.merged))continue;
+    return {W,H,blocks,margin:m};
+  }
+  return null;
+}
+function shuffleBlocks(blocks,W,H,rng=Math.random){
+  for(let attempt=0;attempt<300;attempt++){
+    const m=attempt<200?1:0,occ=new Set(),placed=[];let ok=true;
+    const items=blocks.map(b=>{
+      let cells=b.merged?b.cells:rotCells(b.cells,Math.floor(rng()*4));
+      const mx=Math.min(...cells.map(k=>k.x)),my=Math.min(...cells.map(k=>k.y));
+      cells=cells.map(k=>({x:k.x-mx,y:k.y-my,ch:k.ch,o:k.o}));
+      return {b,cells,w:Math.max(...cells.map(k=>k.x))+1,h:Math.max(...cells.map(k=>k.y))+1};
+    }).sort((a,c)=>Math.max(c.w,c.h)-Math.max(a.w,a.h)||(c.w*c.h-a.w*a.h));
+    for(const it of items){
+      if(it.w>W||it.h>H){ok=false;break;}
+      const pos=[];for(let px=0;px<=W-it.w;px++)for(let py=0;py<=H-it.h;py++)pos.push([px,py]);
+      let done=false;
+      for(const [px,py] of shuffle(pos,rng)){
+        const cs=it.cells.map(k=>({x:k.x+px,y:k.y+py,ch:k.ch,o:k.o}));
+        let free=true;
+        for(const k of cs){for(let dx=-m;dx<=m&&free;dx++)for(let dy=-m;dy<=m;dy++)if(occ.has((k.x+dx)+','+(k.y+dy))){free=false;break;}if(!free)break;}
+        if(free){cs.forEach(k=>occ.add(k.x+','+k.y));placed.push({b:it.b,cs});done=true;break;}
+      }
+      if(!done){ok=false;break;}
+    }
+    if(!ok)continue;
+    placed.forEach(p=>{p.b.cells=p.cs;});
+    return true;
+  }
+  return false;
+}
+//CORE_END
+
+/* ================= UI ================= */
+const SAMPLE={
+  name:'Ejemplo (NARANJA)',builtin:true,
+  grid:['......U','...M..V','NARANJA','U..N...','E..G...','Z..OSO.'],
+  pieces:[[[0,6],[1,6]],[[2,6],[2,5],[2,4]],[[1,3],[2,3],[2,2]],[[2,0],[2,1]],[[3,0],[4,0],[5,0]],[[3,3],[4,3],[5,3]],[[5,4],[5,5]]],
+  clues:{'A2,0':'Cítrico de color naranja','D2,0':'Fruto seco con cáscara dura','D1,3':'Fruta tropical dulce','D0,6':'Con ella se hace el vino','A5,3':'Animal que hiberna'}
+};
+let mem=[];
+const store={
+  get(){try{return JSON.parse(localStorage.getItem('tw_puzzles')||'[]');}catch(e){return mem;}},
+  set(v){mem=v;try{localStorage.setItem('tw_puzzles',JSON.stringify(v));}catch(e){}}
+};
+const $=s=>document.querySelector(s);
+let puzzles=[],cur=0,game=null,words=[],drag=null,hover=null,bad={keys:new Set(),items:[]};
+const CS=48,cv=$('#cv'),ctx=cv.getContext('2d');
+
+/* ---- nube (Supabase, por REST) ---- */
+const SB_URL='https://wcwcmxtvzlimgwwmrnff.supabase.co';
+const SB_KEY='sb_publishable_BXylrpjsXRIXIsyoOHzLHg_DWJokc2-';
+const ls={
+  get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}},
+  del(k){try{localStorage.removeItem(k);}catch(e){}}
+};
+let session=ls.get('tw_session',null),cloud=ls.get('tw_cloud',[]),cloudState='cargando',userTouched=false;
+async function sb(path,opt={},auth=true){
+  if(auth&&session&&session.expires_at-60<Date.now()/1000)await refreshSession();
+  const h={apikey:SB_KEY,'Content-Type':'application/json',...(opt.headers||{})};
+  h.Authorization='Bearer '+((auth&&session)?session.access_token:SB_KEY);
+  const r=await fetch(SB_URL+path,{...opt,headers:h});
+  if(!r.ok){let m='Error '+r.status;try{const j=await r.json();m=j.message||j.msg||j.error_description||j.error||m;}catch(e){}throw new Error(m);}
+  if(r.status===204)return null;
+  return (r.headers.get('content-type')||'').includes('json')?r.json():null;
+}
+function setSession(j){
+  session={access_token:j.access_token,refresh_token:j.refresh_token,expires_at:j.expires_at||Math.floor(Date.now()/1000)+(j.expires_in||3600),email:(j.user&&j.user.email)||(session&&session.email)||''};
+  ls.set('tw_session',session);
+}
+async function login(email,pass){setSession(await sb('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email,password:pass})},false));}
+async function refreshSession(){
+  try{setSession(await sb('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:session.refresh_token})},false));}
+  catch(e){session=null;ls.del('tw_session');updateAuthUI();}
+}
+function logout(){session=null;ls.del('tw_session');updateAuthUI();}
+async function fetchCloud(){
+  try{
+    const rows=await sb('/rest/v1/puzzles?select=name,data&order=name.asc&limit=1000');
+    cloud=rows.map(r=>({name:r.name,...r.data,src:'cloud'}));ls.set('tw_cloud',cloud);cloudState='ok';
+  }catch(e){cloudState='error';}
+  updateAuthUI();
+}
+async function cloudSave(list){
+  const body=list.map(p=>({name:p.name,data:{grid:p.grid,pieces:p.pieces,clues:p.clues||{}}}));
+  for(let i=0;i<body.length;i+=50)await sb('/rest/v1/puzzles?on_conflict=name',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(body.slice(i,i+50))});
+}
+async function cloudDelete(name){await sb('/rest/v1/puzzles?name=eq.'+encodeURIComponent(name),{method:'DELETE'});}
+function localOnly(){const cn=new Set(cloud.map(p=>p.name));return store.get().filter(p=>!cn.has(p.name));}
+function allPuzzles(){puzzles=[SAMPLE,...cloud,...localOnly().map(p=>({...p,src:'local'}))];}
+function refreshList(){const name=puzzles[cur]&&puzzles[cur].name;allPuzzles();cur=Math.max(0,puzzles.findIndex(p=>p.name===name));fillSelect();}
+function updateAuthUI(){
+  $('#btnLogin').textContent=session?'Cerrar sesión':'Iniciar sesión';
+  $('#cloudInfo').textContent=(cloudState==='ok'?'☁ '+cloud.length+' en la nube':cloudState==='error'?'☁ sin conexión':'☁ cargando…')+(session&&session.email?' · '+session.email:'');
+  const n=localOnly().length,up=$('#btnUpload');
+  up.classList.toggle('hidden',!(session&&n));up.textContent='Subir '+n+' locales a la nube';
+}
+$('#btnLogin').onclick=()=>{if(session){logout();return;}$('#lgMsg').textContent='';$('#loginBox').classList.remove('hidden');$('#lgMail').focus();};
+$('#lgCancel').onclick=()=>$('#loginBox').classList.add('hidden');
+async function doLogin(){
+  $('#lgMsg').textContent='Entrando…';
+  try{await login($('#lgMail').value.trim(),$('#lgPass').value);$('#lgPass').value='';$('#loginBox').classList.add('hidden');updateAuthUI();await fetchCloud();refreshList();}
+  catch(e){$('#lgMsg').textContent=/invalid/i.test(e.message)?'Email o contraseña incorrectos.':'No se pudo entrar: '+e.message;}
+}
+$('#lgGo').onclick=doLogin;
+$('#lgPass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+$('#btnUpload').onclick=async()=>{
+  const list=localOnly();if(!session||!list.length)return;
+  try{await cloudSave(list);store.set(store.get().filter(p=>!list.some(x=>x.name===p.name)));await fetchCloud();refreshList();toast('Subido','Se subieron '+list.length+' puzzles a la nube.');}
+  catch(e){toast('Error al subir',e.message);}
+};
+function fillSelect(){
+  const s=$('#puzzleSel');s.innerHTML='';
+  puzzles.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(p.src==='local'?'(local) ':'')+p.name;s.appendChild(o);});
+  s.value=cur;
+}
+function loadPuzzle(i){
+  cur=i;const p=puzzles[i];ls.set('tw_last',p.name);
+  words=deriveWords(p.grid).map(w=>({...w,clue:(p.clues||{})[w.id]||''}));
+  anims=[];hinted=new Set();badSig=new Set();bad={keys:new Set(),items:[]};$('#popup').classList.remove('show');$('#ptitle').textContent=p.name;game=newGame(p,words);
+  if(!game){alert('No se pudo repartir las fichas; revisa el puzzle.');return;}
+  cv.width=game.W*CS;cv.height=game.H*CS;
+  $('#win').style.display='none';
+  $('#puzzleSel').value=i;
+  afterChange(true);
+}
+
+const cen=cells=>({x:cells.reduce((a,k)=>a+k.x,0)/cells.length+.5,y:cells.reduce((a,k)=>a+k.y,0)/cells.length+.5});
+let anims=[],raf=0;
+function drawBlock(b,dx,dy,lift,valid){
+  const now=performance.now();
+  const rot=!lift&&anims.find(a=>a.b===b&&a.type==='rot'),pul=!lift&&anims.find(a=>a.b===b&&a.type==='pulse'),shk=!lift&&anims.find(a=>a.b===b&&a.type==='shake');
+  ctx.save();
+  if(shk){const t=Math.min(1,(now-shk.t0)/shk.dur);ctx.translate(Math.sin(t*Math.PI*6)*(1-t)*6,0);}
+  const cN=cen(b.cells);
+  if(pul){
+    const t=Math.min(1,(now-pul.t0)/pul.dur),q=t<0.2?t/0.2:1-(t-0.2)/0.8,s=1+0.12*Math.sin(q*Math.PI/2);
+    ctx.translate(cN.x*CS,cN.y*CS);ctx.scale(s,s);ctx.translate(-cN.x*CS,-cN.y*CS);
+    if(pul.glow){
+      const g=t<0.15?t/0.15:1-(t-0.15)/0.85;
+      ctx.save();ctx.shadowColor=(pul.color==='orange'?'rgba(255,140,0,':'rgba(27,127,184,')+(0.95*g)+')';ctx.shadowBlur=26;ctx.fillStyle='#fff';
+      for(let i=0;i<2;i++)b.cells.forEach(k=>{if(pul.glow.has(k.o))ctx.fillRect(k.x*CS,k.y*CS,CS,CS);});
+      ctx.restore();
+    }
+  }
+  if(rot){
+    const t=Math.min(1,(now-rot.t0)/rot.dur),e=1-Math.pow(1-t,3),cO=cen(rot.old);
+    ctx.translate((cO.x+(cN.x-cO.x)*e)*CS,(cO.y+(cN.y-cO.y)*e)*CS);
+    ctx.rotate(-Math.PI/2*(1-e));
+    ctx.translate(-cN.x*CS,-cN.y*CS);
+  }
+  drawBlockRaw(b,dx,dy,lift,valid);
+  ctx.restore();
+}
+function tick(){
+  const now=performance.now();
+  anims=anims.filter(a=>now-a.t0<a.dur&&game&&game.blocks.includes(a.b));
+  draw();
+  raf=anims.length?requestAnimationFrame(tick):0;
+}
+function kick(){if(!raf)raf=requestAnimationFrame(tick);}
+function addAnim(a){anims=anims.filter(x=>!(x.b===a.b&&x.type===a.type));anims.push({t0:performance.now(),...a});kick();}
+function doRotate(b){
+  const old=b.cells;
+  if(tryRotate(b,game.blocks,game.W,game.H))addAnim({b,type:'rot',old,dur:240});
+  else addAnim({b,type:'shake',dur:320});
+}
+function drawBlockRaw(b,dx,dy,lift,valid){
+  ctx.save();
+  if(lift){ctx.shadowColor='rgba(0,0,0,.3)';ctx.shadowBlur=12;ctx.shadowOffsetY=4;}
+  const set=new Set(b.cells.map(k=>k.x+','+k.y));
+  const isBad=k=>!lift&&bad.keys.has(k.x+','+k.y);
+  b.cells.forEach(k=>{ctx.fillStyle=isBad(k)?'#ffd9a8':'#fff';ctx.fillRect((k.x+dx)*CS,(k.y+dy)*CS,CS,CS);});
+  ctx.restore();
+  ctx.font='700 '+Math.round(CS*0.52)+'px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  b.cells.forEach(k=>{ctx.fillStyle=isBad(k)?'#b34a00':(b.merged?'#1b7fb8':'#0d2a3a');ctx.fillText(k.ch,(k.x+dx+.5)*CS,(k.y+dy+.54)*CS);});
+  ctx.strokeStyle=valid===false?'#c0392b':'#5b7f93';ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.beginPath();
+  b.cells.forEach(k=>{
+    const x=(k.x+dx)*CS,y=(k.y+dy)*CS;
+    if(!set.has(k.x+','+(k.y-1))){ctx.moveTo(x,y);ctx.lineTo(x+CS,y);}
+    if(!set.has(k.x+','+(k.y+1))){ctx.moveTo(x,y+CS);ctx.lineTo(x+CS,y+CS);}
+    if(!set.has((k.x-1)+','+k.y)){ctx.moveTo(x,y);ctx.lineTo(x,y+CS);}
+    if(!set.has((k.x+1)+','+k.y)){ctx.moveTo(x+CS,y);ctx.lineTo(x+CS,y+CS);}
+  });
+  ctx.stroke();
+}
+function draw(){
+  if(!game)return;
+  const tints=['#eaf3f9','#e1eef6','#edf5fb'];
+  for(let y=0;y<game.H;y++)for(let x=0;x<game.W;x++){ctx.fillStyle=tints[(x*7+y*13+x*y)%3];ctx.fillRect(x*CS,y*CS,CS,CS);}
+  ctx.strokeStyle='#c5dbe8';ctx.lineWidth=1;ctx.beginPath();
+  for(let x=0;x<=game.W;x++){ctx.moveTo(x*CS+.5,0);ctx.lineTo(x*CS+.5,game.H*CS);}
+  for(let y=0;y<=game.H;y++){ctx.moveTo(0,y*CS+.5);ctx.lineTo(game.W*CS,y*CS+.5);}
+  ctx.stroke();
+  game.blocks.forEach(b=>{if(!(drag&&drag.active&&drag.b===b))drawBlock(b,0,0,false);});
+  if(drag&&drag.active)drawBlock(drag.b,drag.dx,drag.dy,true,drag.valid);
+}
+let hinted=new Set(),badSig=new Set(),popTimer=0;
+const cap=t=>t[0]+t.slice(1).toLowerCase();
+function clueItem(w,state){
+  const li=document.createElement('li');li.className='clue '+state;
+  const ic=document.createElement('span');ic.className='ic';ic.textContent=state==='ok'?'✓':state==='warn'?'!':'•';li.appendChild(ic);
+  const t=document.createElement('span');t.className='ct';t.textContent=w.clue||('Palabra de '+w.text.length+' letras');li.appendChild(t);
+  if(state==='todo'){
+    if(w.clue){const n=document.createElement('span');n.className='n';n.textContent='('+w.text.length+' letras)';li.appendChild(n);}
+    if(hinted.has(w.id)){const h=document.createElement('span');h.className='n';h.textContent='· empieza por '+w.text[0];li.appendChild(h);}
+    else{const q=document.createElement('button');q.className='q';q.textContent='?';q.title='Pista';q.onclick=()=>{hinted.add(w.id);updateLists();};li.appendChild(q);}
+  }else{const a=document.createElement('span');a.className='n';a.textContent='('+cap(w.text)+')';li.appendChild(a);}
+  return li;
+}
+function updateLists(){
+  const f=foundWords(game.blocks,words),seen=new Set(bad.items.map(i=>i.wordId));
+  for(const dir of ['A','D']){
+    const ul=$('#list'+dir);ul.innerHTML='';
+    words.filter(w=>w.dir===dir).forEach(w=>ul.appendChild(clueItem(w,f[w.id]?'ok':seen.has(w.id)?'warn':'todo')));
+  }
+  $('#win').style.display=(words.length>0&&words.every(w=>f[w.id]))?'block':'none';
+}
+function showPopup(items){
+  const it=items[0],dirName=d=>d==='A'?'horizontal':'vertical';
+  let title,text;
+  if(it.reason==='rotation'){title='Ficha mal girada';text='«'+it.text+'» tiene las fichas correctas, pero alguna está girada al revés. Gírala e inténtalo de nuevo.';}
+  else if(it.reason==='pieces'){title='Ficha equivocada';text='«'+it.text+'» tiene las letras correctas, pero alguna ficha no es la que corresponde.';}
+  else{title='Dirección equivocada';text='«'+it.text+'» está en '+dirName(it.dir)+', pero esta palabra va en '+dirName(it.dir==='A'?'D':'A')+'.';}
+  if(items.length>1)text+=' (+'+(items.length-1)+' error más)';
+  toast(title,text);
+}
+function toast(title,text){
+  $('#popTitle').textContent=title;$('#popText').textContent=text;
+  const pu=$('#popup');pu.classList.add('show');clearTimeout(popTimer);popTimer=setTimeout(()=>pu.classList.remove('show'),4500);
+}
+$('#popup').onclick=()=>$('#popup').classList.remove('show');
+function afterChange(silent){
+  const merges=resolve(game.blocks,words);
+  const byBlock=new Map();merges.forEach(m=>{if(!byBlock.has(m.b))byBlock.set(m.b,new Set());m.keys.forEach(k=>byBlock.get(m.b).add(k));});
+  byBlock.forEach((glow,blk)=>addAnim({b:blk,type:'pulse',dur:1000,glow}));
+  bad=analyzeBad(game.blocks,words);
+  const fresh=bad.items.filter(it=>!badSig.has(it.sig));
+  badSig=new Set(bad.items.map(it=>it.sig));
+  if(!silent&&fresh.length){
+    fresh.forEach(it=>it.blocks.forEach(b=>addAnim({b,type:'pulse',dur:1000,glow:new Set(it.okeys),color:'orange'})));
+    showPopup(fresh);
+  }
+  draw();updateLists();
+}
+
+function cellPos(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width*game.W,y:(e.clientY-r.top)/r.height*game.H};}
+function blockAt(x,y){return game.blocks.find(b=>b.cells.some(k=>k.x===x&&k.y===y));}
+cv.addEventListener('pointerdown',e=>{
+  if(e.button===2||!game)return;
+  const p=cellPos(e),b=blockAt(Math.floor(p.x),Math.floor(p.y));if(!b)return;
+  drag={b,sx:e.clientX,sy:e.clientY,p0:p,active:false,dx:0,dy:0,valid:true};
+  anims=anims.filter(a=>a.b!==b);
+  cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove',e=>{
+  if(!game)return;const p=cellPos(e);hover=p;
+  if(!drag)return;
+  if(!drag.active&&Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>6)drag.active=true;
+  if(drag.active){
+    drag.dx=Math.round(p.x-drag.p0.x);drag.dy=Math.round(p.y-drag.p0.y);
+    drag.valid=canPlace(drag.b.cells.map(k=>({x:k.x+drag.dx,y:k.y+drag.dy,ch:k.ch,o:k.o})),drag.b,game.blocks,game.W,game.H);
+    draw();
+  }
+});
+cv.addEventListener('pointerup',()=>{
+  if(!drag)return;const d=drag;drag=null;
+  if(d.active){if(d.valid&&(d.dx||d.dy))d.b.cells=d.b.cells.map(k=>({x:k.x+d.dx,y:k.y+d.dy,ch:k.ch,o:k.o}));}
+  else doRotate(d.b);
+  afterChange();
+});
+cv.addEventListener('pointercancel',()=>{drag=null;draw();});
+cv.addEventListener('contextmenu',e=>{
+  e.preventDefault();if(!game)return;
+  const p=cellPos(e),b=blockAt(Math.floor(p.x),Math.floor(p.y));
+  if(b){doRotate(b);afterChange();}
+});
+document.addEventListener('keydown',e=>{
+  if(e.key.toLowerCase()!=='r'||!game||!hover||$('#play').classList.contains('hidden'))return;
+  if(/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))return;
+  const b=blockAt(Math.floor(hover.x),Math.floor(hover.y));
+  if(b){doRotate(b);afterChange();}
+});
+$('#btnShuffle').onclick=()=>{
+  if(!game)return;
+  anims=[];
+  if(shuffleBlocks(game.blocks,game.W,game.H)){afterChange(true);}
+  else toast('No hay sitio','No se pudieron recolocar las fichas. Prueba a separar los grupos ya fusionados.');
+};
+$('#btnReset').onclick=()=>{if(confirm('¿Reiniciar el puzzle desde cero? Se perderá el progreso.'))loadPuzzle(cur);};
+$('#puzzleSel').onchange=e=>loadPuzzle(+e.target.value);
+
+/* ---- pestañas ---- */
+function showTab(t){
+  $('#play').classList.toggle('hidden',t!=='play');$('#editor').classList.toggle('hidden',t!=='edit');
+  $('#tabPlay').classList.toggle('on',t==='play');$('#tabEdit').classList.toggle('on',t==='edit');
+  if(t==='edit')edLoad(puzzles[cur]);
+}
+$('#tabPlay').onclick=()=>showTab('play');
+$('#tabEdit').onclick=()=>showTab('edit');
+
+/* ---- importar / exportar ---- */
+$('#btnExport').onclick=()=>{
+  const p=puzzles[cur],data={name:p.name,grid:p.grid,pieces:p.pieces,clues:p.clues||{}};
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,1)],{type:'application/json'}));
+  a.download=(p.name||'puzzle').replace(/[^\w\-]+/g,'_')+'.json';a.click();
+};
+$('#btnImport').onclick=()=>$('#fileIn').click();
+$('#fileIn').onchange=async e=>{
+  try{
+    const d=JSON.parse(await e.target.files[0].text()),list=Array.isArray(d)?d:[d],ok=[];
+    for(const p of list){
+      if(!p||!Array.isArray(p.grid)||!Array.isArray(p.pieces))continue;
+      p.grid=p.grid.map(r=>[...String(r)].map(ch=>isL(ch)?normLetter(ch)||'.':'.').join(''));
+      const errs=validatePuzzle(p);if(errs.length){alert('«'+(p.name||'?')+'» no es válido:\n'+errs.join('\n'));continue;}
+      p.name=p.name||'Importado';p.clues=p.clues||{};ok.push({name:p.name,grid:p.grid,pieces:p.pieces,clues:p.clues});
+    }
+    if(!ok.length){toast('Importar','No había ningún puzzle válido.');}
+    else{
+      let where='local';
+      if(session){try{await cloudSave(ok);await fetchCloud();where='cloud';}catch(err){toast('No se pudo subir a la nube',err.message+'. Se guarda solo en este navegador.');}}
+      if(where==='local'){const saved=store.get();ok.forEach(p=>{const i=saved.findIndex(x=>x.name===p.name);if(i>=0)saved[i]=p;else saved.push(p);});store.set(saved);}
+      allPuzzles();cur=Math.max(0,puzzles.findIndex(p=>p.name===ok[ok.length-1].name));fillSelect();loadPuzzle(cur);updateAuthUI();
+      if(where==='cloud')toast('Importado',ok.length+' puzzle(s) guardados en la nube.');
+    }
+  }catch(err){alert('No se pudo leer el archivo.');}
+  e.target.value='';
+};
+
+/* ================= EDITOR ================= */
+let ed=null;
+const hue=i=>'hsl('+((i*47)%360)+',70%,84%)';
+function edLoad(pz){
+  const rows=pz.grid.length,cols=Math.max(...pz.grid.map(r=>r.length));
+  ed={name:pz.name,rows,cols,mode:'letters',brush:1,builtin:!!pz.builtin,
+    g:pz.grid.map(r=>Array.from({length:cols},(_,c)=>isL(r[c])?r[c]:'')),
+    p:Array.from({length:rows},()=>Array(cols).fill(0)),clues:{...(pz.clues||{})}};
+  pz.pieces.forEach((pc,i)=>pc.forEach(([r,c])=>{ed.p[r][c]=i+1;}));
+  edRender();
+}
+function edBlank(){
+  ed={name:'Mi puzzle',rows:8,cols:8,mode:'letters',brush:1,builtin:false,
+    g:Array.from({length:8},()=>Array(8).fill('')),p:Array.from({length:8},()=>Array(8).fill(0)),clues:{}};
+  edRender();
+}
+function edGridStrings(){return ed.g.map(r=>r.map(ch=>ch||'.').join(''));}
+function edPieces(){
+  const m=new Map();
+  ed.p.forEach((row,r)=>row.forEach((id,c)=>{if(id>0&&ed.g[r][c]){if(!m.has(id))m.set(id,[]);m.get(id).push([r,c]);}}));
+  return [...m.keys()].sort((a,b)=>a-b).map(k=>m.get(k));
+}
+function edSizes(){const s={};ed.p.forEach((row,r)=>row.forEach((id,c)=>{if(id>0&&ed.g[r][c])s[id]=(s[id]||0)+1;}));return s;}
+function edMsg(t,cls){const m=$('#edMsg');m.textContent=t;m.className=cls||'';}
+function edPaintCell(el,r,c){
+  const id=ed.p[r][c],has=!!ed.g[r][c];
+  el.querySelector('input').style.background=(has&&id>0)?hue(id):'#fff';
+  el.querySelector('.tag').textContent=(has&&id>0)?id:'';
+}
+function edRender(){
+  $('#edName').value=ed.name;$('#edRows').value=ed.rows;$('#edCols').value=ed.cols;
+  $('#modeLetters').classList.toggle('on',ed.mode==='letters');$('#modePieces').classList.toggle('on',ed.mode==='pieces');
+  const grid=$('#edGrid');grid.innerHTML='';grid.style.gridTemplateColumns='repeat('+ed.cols+',40px)';
+  for(let r=0;r<ed.rows;r++)for(let c=0;c<ed.cols;c++){
+    const d=document.createElement('div');d.className='ec';
+    const inp=document.createElement('input');inp.value=ed.g[r][c];inp.maxLength=2;inp.dataset.r=r;inp.dataset.c=c;
+    inp.readOnly=ed.mode==='pieces';
+    const tag=document.createElement('span');tag.className='tag';
+    d.append(inp,tag);grid.appendChild(d);edPaintCell(d,r,c);
+    inp.addEventListener('input',()=>{
+      const ch=normLetter(inp.value.slice(-1));inp.value=ch;ed.g[r][c]=ch;
+      if(!ch)ed.p[r][c]=0;
+      edPaintCell(d,r,c);edClues();edBrushes();
+      if(ch){const nx=grid.querySelector('input[data-r="'+r+'"][data-c="'+(c+1)+'"]');if(nx)nx.focus();}
+    });
+    inp.addEventListener('keydown',e=>{
+      const mv={ArrowLeft:[0,-1],ArrowRight:[0,1],ArrowUp:[-1,0],ArrowDown:[1,0]}[e.key];
+      if(mv){const nx=grid.querySelector('input[data-r="'+(r+mv[0])+'"][data-c="'+(c+mv[1])+'"]');if(nx){nx.focus();e.preventDefault();}}
+      if(e.key==='Backspace'&&!inp.value){const nx=grid.querySelector('input[data-r="'+r+'"][data-c="'+(c-1)+'"]');if(nx)nx.focus();}
+    });
+    inp.addEventListener('mousedown',e=>{
+      if(ed.mode!=='pieces')return;
+      e.preventDefault();
+      if(!ed.g[r][c])return;
+      ed.p[r][c]=(ed.p[r][c]===ed.brush)?0:ed.brush;
+      edPaintCell(d,r,c);edBrushes();
+    });
+  }
+  edBrushes();edClues();
+}
+function edBrushes(){
+  const box=$('#brushes');box.innerHTML='';
+  if(ed.mode!=='pieces')return;
+  const sizes=edSizes(),maxId=Math.max(0,...Object.keys(sizes).map(Number),ed.brush);
+  for(let i=1;i<=maxId+1;i++){
+    const b=document.createElement('button');b.className='brush'+(ed.brush===i?' on':'');
+    const n=sizes[i]||0;b.textContent=i+(n?' ('+n+')':' +');
+    b.style.borderColor=hue(i);if(ed.brush!==i)b.style.background=hue(i);
+    if(n&&(n<2||n>5))b.style.outline='2px solid #c0392b';
+    b.onclick=()=>{ed.brush=i;edBrushes();};box.appendChild(b);
+  }
+}
+function edClues(){
+  const box=$('#clues');box.innerHTML='';
+  const ws=deriveWords(edGridStrings());
+  if(!ws.length){box.textContent='Escribe palabras en la cuadrícula para añadir pistas.';return;}
+  ws.forEach(w=>{
+    const d=document.createElement('div');d.className='cl';
+    const b=document.createElement('b');b.textContent=(w.dir==='A'?'→ ':'↓ ')+w.text;
+    const i=document.createElement('input');i.type='text';i.placeholder='Pista (opcional)';i.value=ed.clues[w.id]||'';
+    i.oninput=()=>{ed.clues[w.id]=i.value;};
+    d.append(b,i);box.appendChild(d);
+  });
+}
+$('#edName').oninput=e=>{ed.name=e.target.value;};
+$('#modeLetters').onclick=()=>{ed.mode='letters';edRender();};
+$('#modePieces').onclick=()=>{ed.mode='pieces';edRender();};
+$('#edResize').onclick=()=>{
+  const R=Math.min(14,Math.max(3,+$('#edRows').value||8)),C=Math.min(14,Math.max(3,+$('#edCols').value||8));
+  const g=Array.from({length:R},(_,r)=>Array.from({length:C},(_,c)=>(ed.g[r]&&ed.g[r][c])||''));
+  const p=Array.from({length:R},(_,r)=>Array.from({length:C},(_,c)=>(ed.p[r]&&ed.p[r][c])||0));
+  ed.rows=R;ed.cols=C;ed.g=g;ed.p=p;edRender();
+};
+$('#edAuto').onclick=()=>{
+  const pcs=autoSplit(edGridStrings());
+  if(!pcs){edMsg('No he podido dividirlo automáticamente; prueba a ajustar las piezas a mano.','err');return;}
+  ed.p=ed.p.map(r=>r.map(()=>0));pcs.forEach((pc,i)=>pc.forEach(([r,c])=>{ed.p[r][c]=i+1;}));
+  ed.brush=1;edRender();edMsg('Piezas generadas. Puedes repartirlas otra vez o corregirlas a mano.','ok');
+};
+$('#edClearPieces').onclick=()=>{ed.p=ed.p.map(r=>r.map(()=>0));ed.brush=1;edRender();};
+$('#edNew').onclick=edBlank;
+$('#edSave').onclick=async()=>{
+  const pz={name:(ed.name||'Sin nombre').trim(),grid:edGridStrings(),pieces:edPieces(),clues:{}};
+  const ws=deriveWords(pz.grid);ws.forEach(w=>{if((ed.clues[w.id]||'').trim())pz.clues[w.id]=ed.clues[w.id].trim();});
+  const errs=validatePuzzle(pz);
+  if(errs.length){edMsg(errs.join(' '),'err');return;}
+  if(pz.name===SAMPLE.name){edMsg('Ese nombre está reservado para el ejemplo; cámbialo.','err');return;}
+  let where='local';
+  if(session){
+    edMsg('Guardando en la nube…');
+    try{await cloudSave([pz]);store.set(store.get().filter(x=>x.name!==pz.name));await fetchCloud();where='cloud';}
+    catch(e){edMsg('No se pudo guardar en la nube: '+e.message,'err');return;}
+  }else{
+    const saved=store.get(),i=saved.findIndex(p=>p.name===pz.name);
+    if(i>=0)saved[i]=pz;else saved.push(pz);store.set(saved);
+  }
+  allPuzzles();cur=puzzles.findIndex(p=>p.name===pz.name);fillSelect();updateAuthUI();
+  edMsg('');showTab('play');loadPuzzle(cur);
+  toast('Guardado',where==='cloud'?'Puzzle guardado en la nube.':'Guardado solo en este navegador. Inicia sesión para guardarlo en la nube.');
+};
+$('#edDelete').onclick=async()=>{
+  const p=puzzles[cur];if(p.builtin){edMsg('El ejemplo no se puede borrar.','err');return;}
+  if(!confirm('¿Borrar «'+p.name+'»?'))return;
+  try{
+    if(p.src==='cloud'){
+      if(!session){edMsg('Inicia sesión para borrar puzzles de la nube.','err');return;}
+      await cloudDelete(p.name);await fetchCloud();
+      if(cloud.some(x=>x.name===p.name)){edMsg('No se pudo borrar: no tienes permiso.','err');return;}
+    }
+    store.set(store.get().filter(x=>x.name!==p.name));
+  }catch(e){edMsg('No se pudo borrar: '+e.message,'err');return;}
+  allPuzzles();cur=0;fillSelect();updateAuthUI();showTab('play');loadPuzzle(0);
+};
+
+document.addEventListener('pointerdown',()=>{userTouched=true;},{capture:true});
+$('#puzzleSel').addEventListener('change',()=>{userTouched=true;});
+allPuzzles();
+{const i=puzzles.findIndex(p=>p.name===ls.get('tw_last',null));cur=i>=0?i:0;}
+fillSelect();loadPuzzle(cur);updateAuthUI();
+fetchCloud().then(()=>{
+  allPuzzles();
+  const last=ls.get('tw_last',null),i=puzzles.findIndex(p=>p.name===last);
+  if(!userTouched&&i>=0&&puzzles[cur]&&puzzles[cur].name!==last){cur=i;fillSelect();loadPuzzle(i);}else refreshList();
+});
+</script>
+</body>
+</html>
